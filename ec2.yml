@@ -26,7 +26,7 @@ Resources:
           ToPort: 3389
           CidrIp: 0.0.0.0/0
 
-  Https-sg:
+  HttpsSg:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow HTTPS from PublicSubnet
