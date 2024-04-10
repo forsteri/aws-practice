@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to launch an EC2 instance in a public subnet.
+
+Parameters:
+  PublicSubnetId:
+    Description: The ID of the public subnet where the EC2 instance will be launched.
+    Type: AWS::EC2::Subnet::Id
+
+  VPCId:
+    Description: The ID of the VPC where the subnet is located.
+    Type: AWS::EC2::VPC::Id
+  
+  MyIP:
+    Description: for IP restriction (e.g., 192.168.1.1/32)
+    Type: String
+    Default: 119.229.132.49/32
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  SessionManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      RoleName: 'SSMMIC'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access from the internet
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: !Ref MyIP
+
+  MyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref SessionManagerRole
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      ImageId: ami-0ccf1fea52470bfb0  # Windows_Server-2022-Japanese-Full-Base-2023.11.15
+      SubnetId: !Ref PublicSubnetId
+      IamInstanceProfile: !Ref MyInstanceProfile
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+      Tags:
+        - Key: Name
+          Value: MyPublicEC2Instance
+
+Outputs:
+  InstanceId:
+    Description: The Instance ID of the EC2 instance.
+    Value: !Ref MyEC2Instance
+
+  InstancePublicIP:
+    Description: The public IP address of the EC2 instance
+    Value: !GetAtt MyEC2Instance.PublicIp

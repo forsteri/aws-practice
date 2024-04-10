@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to create an IAM role for Systems Manager Session Manager access to EC2 instances.
+
+Resources:
+  SessionManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      RoleName: 'SSMMIC2'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore

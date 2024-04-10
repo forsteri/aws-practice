@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to launch an EC2 instance in a public subnet.
+
+Parameters:
+  SubnetId:
+    Description: The ID of the subnet where the EC2 instance will be launched.
+    Type: AWS::EC2::Subnet::Id
+
+  VPCId:
+    Description: The ID of the VPC where the subnet is located.
+    Type: AWS::EC2::VPC::Id
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  
+  InstanceName:
+    Description: EC2 Instance Name
+    Type: String
+    Default: XXX-TEST
+
+Resources:
+  SessionManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      RoleName: 'SSMMIC'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  #NewKeyPair:
+  #  Type: 'AWS::EC2::KeyPair'
+  #  Properties:
+  #    KeyName: Haji-Key
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access from the internet
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  MyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref SessionManagerRole
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      # ImageId: ami-0ccf1fea52470bfb0  # Windows_Server-2022-Japanese-Full-Base-2023.11.15
+      ImageId: ami-0bdd30a3e20da30a1  # Amazon Linux 2023
+      SubnetId: !Ref SubnetId
+      IamInstanceProfile: !Ref MyInstanceProfile
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+
+Outputs:
+  InstanceId:
+    Description: The Instance ID of the EC2 instance.
+    Value: !Ref MyEC2Instance

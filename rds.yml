@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Sample Template: RDS SQL Server instance'
+
+Resources:
+  MyDBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBName: 'mydb'
+      AllocatedStorage: '20'
+      DBInstanceClass: 'db.t3.micro'
+      Engine: 'sqlserver-ex'
+      EngineVersion: '14.00.1000.169'  # SQL Server 2017 Express edition
+      MasterUsername: 'adminuser'
+      MasterUserPassword: 'adminpassword'
+      BackupRetentionPeriod: '7'
+      LicenseModel: 'license-included'
+      Tags:
+        - Key: Name
+          Value: 'MyDBInstance'
