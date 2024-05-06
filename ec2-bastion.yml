@@ -1,3 +1,4 @@
+# ec2 bastion
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Template to launch an EC2 instance in a public subnet.
 
