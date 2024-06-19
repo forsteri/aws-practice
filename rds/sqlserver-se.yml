@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template for launching a SQL Server 2019 RDS instance.'
+
+Parameters:
+  DBInstanceIdentifier:
+    Description: 'The database instance identifier'
+    Type: String
+    Default: 'Haji-Test-SQLS2019-SE'
+
+  DBInstanceClass:
+    Description: The DB instance class
+    Type: String
+    Default: db.t3.xlarge
+    AllowedValues:
+      - db.t3.xlarge
+      - db.t3.2xlarge
+      - db.m5.large
+  
+  # [2019-latest:15.00.4355.3.v1, 2022-latest:16.00.4115.5]
+  EngineVersion:
+    Description: 'The version of SQL Server'
+    Type: String
+    Default: '15.00.4355.3.v1' # Update as necessary
+
+  MasterUsername:
+    Description: The master username for the DB instance
+    Type: String
+    Default: admin
+
+  # MasterUserPassword:
+  #   Description: The master password for the DB instance
+  #   Type: String
+  #   NoEcho: true
+  #   MinLength: 8
+  #   ConstraintDescription: Must be at least 8 characters
+
+  SecretName:
+    Description: 'The name of the secret in Secrets Manager'
+    Type: String
+    Default: 'DatabaseSecret'
+
+  AllocatedStorage:
+    Description: The size of the database (GB)
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 1000 # 16384
+
+  SubnetId1:
+    Description: The ID of the subnet.
+    Type: AWS::EC2::Subnet::Id
+
+  SubnetId2:
+    Description: The ID of the subnet.
+    Type: AWS::EC2::Subnet::Id
+
+Resources:
+  DBMasterUserSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Ref SecretName
+      Description: 'RDS Master User Password'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+
+  MyDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier # DB識別子
+      Engine: sqlserver-se # [sqlserver-ex, sqlserver-web, sqlserver-se, sqlserver-ee]
+      EngineVersion: !Ref EngineVersion
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterUserSecret, ':SecretString:username}}']]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterUserSecret, ':SecretString:password}}']]
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: false
+      PubliclyAccessible: true
+      LicenseModel: license-included
+      Tags:
+        - Key: Name
+          Value: !Ref DBInstanceIdentifier
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for SQL Server instance
+      SubnetIds:
+        - !Ref SubnetId1
+        - !Ref SubnetId2
+
+Outputs:
+  DBInstanceId:
+    Description: The Instance ID of the RDS DB instance
+    Value: !Ref MyDBInstance
+
+  DBInstanceEndpoint:
+    Description: The connection endpoint for the DB instance
+    Value: !GetAtt MyDBInstance.Endpoint.Address
